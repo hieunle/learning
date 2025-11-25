@@ -1,0 +1,25 @@
+Requirement AI Helpdesk :
+--------------------------
+RAG-based Knowledge Base:
+- Ingest approved Electrodry website pages, SOPs, and internal documentation.
+- Chunking and embeddings for efficient retrieval.
+- Answers always cite the original source.
+
+Agent Assist:
+- Suggested responses for agents and technicians.
+- Brand-compliant tone and style.
+- Includes price lookup based on internal rules (no AI hallucinations).
+- Regional restrictions enforced (service coverage validation).
+
+Admin Features:
+- Web-based portal for uploading and managing knowledge documents.
+- Analytics dashboard showing usage, citation coverage, and failure rates.
+
+Frontend:
+- Internal web UI or integration with existing platforms (Zendesk/Intercom).
+
+Backend & Infrastructure:
+- API backend hosting.
+- Vector database for RAG.
+- LLM API usage included.
+- Logging and monitoring.
