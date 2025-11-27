@@ -2,8 +2,8 @@
 from typing import Optional
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
-from agno.db.postgres import PostgresDb
 from app.core.config import settings
+from app.core.database import get_agent_db
 from app.core.knowledge_base import get_knowledge_base
 
 # Singleton agent instance
@@ -13,11 +13,10 @@ _agent_instance: Optional[Agent] = None
 def create_assistant_agent() -> Agent:
     """Create and configure a simple general assistant agent."""
     
-    # Initialize database for agent sessions
-    db = PostgresDb(
-        db_url=settings.supabase_db_url,
-        session_table="agent_sessions"
-    )
+    # Get shared database instance for agent sessions
+    db = get_agent_db()
+    
+    # Get knowledge base
     knowledge = get_knowledge_base()
     # Create agent with OpenAI
     agent = Agent(
@@ -36,11 +35,13 @@ def create_assistant_agent() -> Agent:
         instructions=[
             "You are a helpful AI assistant that can answer any question the user wants.",
             "Always be polite, clear, and informative in your responses.",
+            "When you use information from the knowledge base, always cite your sources.",
+            "Include references at the end of your response when providing information from the knowledge base.",
             "If you don't know something, be honest about it.",
             "Provide accurate and helpful information to the best of your ability.",
         ],
         markdown=True,
-        enable_session_summaries=True
+        # enable_session_summaries=True
     )
     
     return agent

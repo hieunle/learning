@@ -5,6 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.agent_os import agent_os
 import logging
+import time
+
+# Record startup time
+_startup_begin = time.time()
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +22,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown."""
     # Startup
+    startup_time = time.time() - _startup_begin
     logger.info("=" * 60)
     logger.info("🚀 Electrodry AI Helpdesk API Starting")
     logger.info("=" * 60)
@@ -29,6 +34,8 @@ async def lifespan(app: FastAPI):
     logger.info("  ✓ Knowledge Management")
     logger.info("  ✓ Agent Runs API")
     logger.info("  ✓ Production Monitoring")
+    logger.info("=" * 60)
+    logger.info(f"⏱️  Backend startup completed in {startup_time:.3f} seconds")
     logger.info("=" * 60)
     
     yield
@@ -64,7 +71,6 @@ app.router.lifespan_context = lifespan
 cors_origins = [
     settings.frontend_url,
     "http://localhost:3000",
-    "http://localhost:3001",
     "https://os.agno.com",
     "https://os-stg.agno.com",
     "https://app.agno.com",
@@ -115,6 +121,6 @@ async def health():
 
 
 if __name__ == "__main__":
-    agent_os.serve(app="app.main:app", host="0.0.0.0", port=8000, reload=True)
+    agent_os.serve(app="app.main:app",reload=True)
 
 

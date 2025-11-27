@@ -1,8 +1,10 @@
 """Database connection and session management."""
+from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from supabase import create_client, Client
+from agno.db.postgres import PostgresDb
 from app.core.config import settings
 
 # Supabase client
@@ -22,9 +24,28 @@ SQLALCHEMY_DATABASE_URL = f"postgresql://postgres:[password]@db.{database_url}.s
 
 Base = declarative_base()
 
+# Singleton PostgresDb instance for agent sessions
+_agent_db_instance: Optional[PostgresDb] = None
+
 
 def get_supabase() -> Client:
     """Get Supabase client instance."""
     return supabase
+
+
+def get_agent_db() -> PostgresDb:
+    """
+    Get or create the shared PostgresDb instance for agent sessions.
+    
+    This ensures all agents share the same database connection pool
+    and session table for better resource management.
+    """
+    global _agent_db_instance
+    if _agent_db_instance is None:
+        _agent_db_instance = PostgresDb(
+            db_url=settings.supabase_db_url,
+            session_table="agent_sessions"
+        )
+    return _agent_db_instance
 
 

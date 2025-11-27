@@ -19,13 +19,13 @@ def create_agent_os() -> AgentOS:
     # Get agents and knowledge
     helpdesk_agent = get_helpdesk_agent()
     assistant_agent = get_assistant_agent()
-    knowledge = get_knowledge_base()
+    # knowledge = get_knowledge_base()
     
     # Create AgentOS
     agent_os = AgentOS(
         description="Electrodry AI Helpdesk - Production Runtime",
         agents=[helpdesk_agent, assistant_agent],
-        knowledge=[knowledge],
+        # knowledge=[knowledge],
     )
     
     return agent_os
@@ -33,7 +33,3 @@ def create_agent_os() -> AgentOS:
 
 # Create the AgentOS instance
 agent_os = create_agent_os()
-
-# Get the FastAPI app
-app = agent_os.get_app()
-

@@ -4,10 +4,9 @@ from uuid import uuid4
 import json
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
-from agno.db.postgres import PostgresDb
 from agno.tools import tool
 from app.core.config import settings
-from app.core.database import get_supabase
+from app.core.database import get_supabase, get_agent_db
 from app.core.knowledge_base import get_knowledge_base
 from app.agents.tools import lookup_price
 
@@ -41,11 +40,8 @@ def price_lookup_tool(
 def create_helpdesk_agent() -> Agent:
     """Create and configure the Agno agent with proper settings."""
     
-    # Initialize database for agent sessions
-    db = PostgresDb(
-        db_url=settings.supabase_db_url,
-        session_table="agent_sessions"
-    )
+    # Get shared database instance for agent sessions
+    db = get_agent_db()
     
     # Get knowledge base
     knowledge = get_knowledge_base()
@@ -64,14 +60,14 @@ def create_helpdesk_agent() -> Agent:
         db=db,  # Fixed: use 'db' instead of 'storage'
         add_history_to_context=True,  # Fixed: correct parameter name
         num_history_runs=5,  # Include last 5 conversation turns for context
-        # Session state for tracking user context
+        # # Session state for tracking user context
         session_state={
             "user_preferences": {},
             "recent_topics": [],
             "service_history": []
         },
-        add_session_state_to_context=True,  # Make session state available to agent
-        enable_agentic_state=True,  # Allow agent to update session state automatically
+        # add_session_state_to_context=True,  # Make session state available to agent
+        # enable_agentic_state=True,  # Allow agent to update session state automatically
         tools=[price_lookup_tool],
         instructions=[
             "You are a helpful customer service assistant for Electrodry, a professional cleaning company.",
@@ -87,7 +83,7 @@ def create_helpdesk_agent() -> Agent:
             "Remember user preferences and context across the conversation.",
         ],
         markdown=True,
-        enable_session_summaries=True
+        # enable_session_summaries=True
     )
     
     return agent
