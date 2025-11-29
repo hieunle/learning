@@ -1,41 +1,33 @@
-"""Database connection and session management."""
+"""Database connection and session management.
+
+Architecture:
+- Supabase: Used ONLY for user authentication (Supabase Auth)
+- PgVector: Local PostgreSQL with pgvector for vector embeddings and knowledge base
+"""
 from typing import Optional
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from supabase import create_client, Client
 from agno.db.postgres import PostgresDb
 from app.core.config import settings
 
-# Supabase client
+# Supabase client for authentication only
 supabase: Client = create_client(
     settings.supabase_url,
     settings.supabase_service_key
 )
-
-# SQLAlchemy setup for direct database access
-# Extract connection details from Supabase URL
-# Format: postgresql://[user[:password]@][host][:port][/dbname]
-database_url = settings.supabase_url.replace("https://", "").split(".")[0]
-SQLALCHEMY_DATABASE_URL = f"postgresql://postgres:[password]@db.{database_url}.supabase.co:5432/postgres"
-
-# Note: In production, use proper connection string from Supabase settings
-# For now, we'll primarily use the Supabase client
-
-Base = declarative_base()
 
 # Singleton PostgresDb instance for agent sessions
 _agent_db_instance: Optional[PostgresDb] = None
 
 
 def get_supabase() -> Client:
-    """Get Supabase client instance."""
+    """Get Supabase client instance for authentication."""
     return supabase
 
 
 def get_agent_db() -> PostgresDb:
     """
     Get or create the shared PostgresDb instance for agent sessions.
+    Uses local pgvector database.
     
     This ensures all agents share the same database connection pool
     and session table for better resource management.
@@ -43,7 +35,7 @@ def get_agent_db() -> PostgresDb:
     global _agent_db_instance
     if _agent_db_instance is None:
         _agent_db_instance = PostgresDb(
-            db_url=settings.supabase_db_url,
+            db_url=settings.pgvector_db_url,
             session_table="agent_sessions"
         )
     return _agent_db_instance

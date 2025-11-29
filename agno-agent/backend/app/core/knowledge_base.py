@@ -7,7 +7,7 @@ from app.core.config import settings
 def get_knowledge_base() -> Knowledge:
     """
     Create and return the shared Knowledge base instance.
-    Uses PgVector for storage and OpenAI for embeddings.
+    Uses local PgVector database for storage and OpenAI for embeddings.
     
     Following Agno best practices:
     - Uses PostgresDb for content tracking (metadata, status)
@@ -25,16 +25,16 @@ def get_knowledge_base() -> Knowledge:
         api_key=settings.openai_api_key
     )
     
-    # Initialize vector database for storing embeddings
+    # Initialize vector database for storing embeddings (local pgvector)
     vector_db = PgVector(
         table_name="common_knowledge_chunks",
-        db_url=settings.supabase_db_url,
+        db_url=settings.pgvector_db_url,
         embedder=embedder,
     )
     
-    # Initialize contents database for tracking content metadata
+    # Initialize contents database for tracking content metadata (local pgvector)
     contents_db = PostgresDb(
-        db_url=settings.supabase_db_url,
+        db_url=settings.pgvector_db_url,
         knowledge_table="common_knowledge_contents",
     )
     

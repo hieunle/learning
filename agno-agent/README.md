@@ -61,6 +61,7 @@ An AI-powered helpdesk system using RAG (Retrieval Augmented Generation) for int
 
 ## 📖 Documentation
 
+- **[FEATURES.md](FEATURES.md)** - Complete feature documentation
 - **[SETUP.md](SETUP.md)** - Complete setup guide
 - **[docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md)** - Database configuration
 - **[docs/agno_quick_reference.md](docs/agno_quick_reference.md)** - Code patterns & examples

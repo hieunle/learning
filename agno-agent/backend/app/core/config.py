@@ -13,10 +13,12 @@ class Settings(BaseSettings):
         extra="allow"
     )
     
-    # Supabase Configuration
+    # Supabase Configuration (Authentication Only)
     supabase_url: str
     supabase_service_key: str
-    supabase_db_url: str  # PostgreSQL connection string for direct DB access
+    
+    # PgVector Database Configuration (Vector DB & Knowledge Base)
+    pgvector_db_url: str  # Local PostgreSQL with pgvector extension
     
     # OpenAI Configuration
     openai_api_key: str

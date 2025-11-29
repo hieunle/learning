@@ -21,9 +21,8 @@ async function apiRequest<T>(
 ): Promise<T> {
   const { token, ...fetchOptions } = options
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...fetchOptions.headers,
   }
 
   if (token) {
@@ -32,7 +31,10 @@ async function apiRequest<T>(
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...fetchOptions,
-    headers,
+    headers: {
+      ...headers,
+      ...(fetchOptions.headers as Record<string, string> || {}),
+    },
   })
 
   if (!response.ok) {
@@ -91,7 +93,15 @@ export const api = {
 
   // AgentOS Agent Runs API - https://docs.agno.com/agent-os/api/usage
   agents: {
-    // Run an agent with AgentOS built-in API
+    // List all available agents
+    // Reference: https://docs.agno.com/reference-api/schema/agents/list-all-agents
+    list: (token: string) =>
+      apiRequest('/agents', { 
+        method: 'GET',
+        token 
+      }),
+
+    // Run an agent with AgentOS built-in API (non-streaming)
     // Uses form-based input as per AgentOS specification
     run: async (
       agentId: string,
@@ -122,6 +132,72 @@ export const api = {
 
       return response.json()
     },
+
+    // Run an agent with streaming support
+    // Returns an async generator that yields streaming events
+    runStream: async function* (
+      agentId: string,
+      message: string,
+      sessionId: string | null,
+      userId: string | null,
+      token: string
+    ): AsyncGenerator<any> {
+      const formData = new FormData()
+      formData.append('message', message)
+      if (sessionId) formData.append('session_id', sessionId)
+      if (userId) formData.append('user_id', userId)
+      formData.append('stream', 'true')
+
+      const response = await fetch(`${API_BASE_URL}/agents/${agentId}/runs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Agent run failed' }))
+        throw new Error(error.detail)
+      }
+
+      if (!response.body) {
+        throw new Error('No response body for streaming')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.trim() === '') continue
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') continue
+              
+              try {
+                const parsed = JSON.parse(data)
+                yield parsed
+              } catch (e) {
+                console.error('Failed to parse streaming data:', e)
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
+    },
   },
 
   // AgentOS Sessions API - https://docs.agno.com/reference-api/session/list-sessions
@@ -145,10 +221,10 @@ export const api = {
       }),
   },
 
-  // Backward compatibility - alias for agents.run with helpdesk-assistant
+  // Backward compatibility - alias for agents.run with helpdesk-assistant as default
   chat: {
-    send: (message: string, sessionId: string | null, token: string, userId?: string | null) =>
-      api.agents.run('helpdesk-assistant', message, sessionId, userId || null, token, false),
+    send: (message: string, sessionId: string | null, token: string, userId?: string | null, agentId: string = 'helpdesk-assistant') =>
+      api.agents.run(agentId, message, sessionId, userId || null, token, false),
   },
 }
 
