@@ -1,18 +1,58 @@
 services:
+  # PgVector Database - Vector database for knowledge base and embeddings
+  pgvector:
+    image: agnohq/pgvector:16
+    container_name: agno-pgvector
+    environment:
+      - POSTGRES_DB=ai
+      - POSTGRES_USER=ai
+      - POSTGRES_PASSWORD=ai
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5532:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai -d ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend - FastAPI + Agno AgentOS
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: agno-backend
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env
     environment:
+      # Override database URL to use Docker service name
+      - PGVECTOR_DB_URL=postgresql+psycopg://ai:ai@pgvector:5432/ai
+      # Explicitly set required environment variables
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      # Backend configuration
+      - BACKEND_URL=http://backend:8000
+      - FRONTEND_URL=http://frontend:3000
+      - ENVIRONMENT=docker
     volumes:
       - ./backend:/app
+    depends_on:
+      pgvector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5.0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
     develop:
       watch:
         - action: sync
@@ -21,25 +61,31 @@ services:
           ignore:
             - .venv
             - __pycache__
+            - "*.pyc"
+            - .env
 
+  # Frontend - Next.js application
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: agno-frontend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      # Use backend service name for Docker networking
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      # Supabase configuration
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
-# Note: Database is assumed to be external (Supabase) as per project configuration.
-# If local DB is needed, uncomment and configure below:
-#   db:
-#     image: postgres:15
-#     environment:
-#       POSTGRES_PASSWORD: password
-#       POSTGRES_DB: app
-#     ports:
-#       - "5432:5432"
+# Persistent volumes for data storage
+volumes:
+  pgvector_data:
+    driver: local
+    name: agno_pgvector_data
 
